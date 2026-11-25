@@ -1,6 +1,7 @@
 import express from 'express';
 import morgan from 'morgan';
 import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
 import authRoutes from './routes/auth.js';
 import reviewRoutes from './routes/reviews.js';
 import userRoutes from './routes/users.js';
@@ -11,6 +12,15 @@ const app = express();
 app.use(morgan('dev'));
 app.use(cors({ origin: 'http://localhost:5175', credentials: false }));
 app.use(express.json());
+// Strip keys starting with "$" or containing "." from body, query and params so
+// MongoDB operators ($ne, $gt, $regex, $where...) can never reach a query.
+// Must come after express.json() (needs the parsed body) and before the routes.
+app.use(
+  mongoSanitize({
+    onSanitize: ({ req, key }) =>
+      console.warn(`[security] removed "${key}" from ${req.method} ${req.originalUrl}`)
+  })
+);
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
